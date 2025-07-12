@@ -9,32 +9,54 @@ export default {
       'Content-Type': 'application/json'
     };
 
-    // Handle CORS preflight requests
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+    try {
+      // Handle CORS preflight requests
+      if (request.method === 'OPTIONS') {
+        return new Response(null, { headers: corsHeaders });
+      }
+
+      const apiKey = env.OPENAI_API_KEY; // Make sure to name your secret OPENAI_API_KEY in the Cloudflare Workers dashboard
+      const apiUrl = 'https://api.openai.com/v1/chat/completions';
+      const userInput = await request.json();
+
+      // Build the request body for OpenAI
+      const requestBody = {
+        model: 'gpt-4o', // Correct model name
+        messages: userInput.messages,
+        max_tokens: 300,
+      };
+      // Forward 'tools' if present in the request
+      if (userInput.tools) {
+        requestBody.tools = userInput.tools;
+      }
+
+      // Make the API request to OpenAI
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      // Try to parse the response as JSON
+      let data;
+      try {
+        data = await response.json();
+      } catch (err) {
+        return new Response(JSON.stringify({ error: 'Invalid JSON from OpenAI.' }), { status: 500, headers: corsHeaders });
+      }
+
+      // If OpenAI returns an error, forward it
+      if (!response.ok) {
+        return new Response(JSON.stringify({ error: data.error || 'OpenAI API error.' }), { status: response.status, headers: corsHeaders });
+      }
+
+      return new Response(JSON.stringify(data), { headers: corsHeaders });
+    } catch (err) {
+      // Catch-all error handler for unexpected errors
+      return new Response(JSON.stringify({ error: err.message || 'Unexpected server error.' }), { status: 500, headers: corsHeaders });
     }
-
-    const apiKey = env.OPENAI_API_KEY; // Make sure to name your secret OPENAI_API_KEY in the Cloudflare Workers dashboard
-    const apiUrl = 'https://api.openai.com/v1/chat/completions';
-    const userInput = await request.json();
-
-    const requestBody = {
-      model: 'gpt-4o',
-      messages: userInput.messages,
-      max_completion_tokens: 300,
-    };
-
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
-
-    const data = await response.json();
-
-    return new Response(JSON.stringify(data), { headers: corsHeaders });
   }
 };
