@@ -22,28 +22,27 @@ chatForm.addEventListener("submit", async (e) => {
     const requestBody = {
       model: "gpt-4o", // Use the gpt-4o model
       messages: [
-        { role: "system", content: "You are a helpful assistant for L'Oréal." },
-        { role: "user", content: message },
-      ],
-      // Add the prompt tool with your custom prompt ID
-      tools: [
         {
-          type: "prompt",
-          id: "pmpt_6871bf3541248195a7b0499d932338dd0ff3a23e7c63555f",
-          version: "2",
+          role: "system",
+          content:
+            "Your name is Marie, You are a helpful assistant for L'Oréal. Only answer questions related to L'Oréal, its products, history, or beauty advice. If a question is not related to L'Oréal, politely reply: 'Sorry, I can only answer questions about L'Oréal and its products.'",
         },
+        { role: "user", content: message },
       ],
     };
 
     // Make the API request to your Cloudflare Worker endpoint
     // IMPORTANT: Replace the URL below with your actual Worker URL, e.g. "https://loreal-chatbot.yourname.workers.dev"
-    const response = await fetch("https://loreal-chatbot.yourname.workers.dev", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const response = await fetch(
+      "https://odd-star-5a20.evan24207.workers.dev/",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
 
     // Try to parse the response as JSON
     let data;
@@ -59,7 +58,9 @@ chatForm.addEventListener("submit", async (e) => {
     const reply =
       data.choices && data.choices[0] && data.choices[0].message.content
         ? data.choices[0].message.content
-        : (data.error ? `Error: ${data.error.message || data.error}` : "Sorry, I couldn't get a response.");
+        : data.error
+        ? `Error: ${data.error.message || data.error}`
+        : "Sorry, I couldn't get a response.";
 
     // Show the assistant's reply in the chat window
     chatWindow.innerHTML = `<b>You:</b> ${message}<br><b>Bot:</b> ${reply}`;
